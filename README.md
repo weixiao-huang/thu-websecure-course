@@ -87,4 +87,34 @@ $ tcpdump -i eth0
 
 ##### 1.2
 
-同上述方法，我们无法
+###### 获取同一子网下的在线设备的ip和mac地址
+
+我们的问题转化为，2机器在同一子网中（my_network），他们如何嗅探到对方的ip。为此，同上述方法，我们利用上面的容器，在两容器中使用`nmap -sP 192.168.26.0/24`命令扫描子网：
+
+![1.1-nmap](./img/1.1-nmap.png)
+
+于是可以得到所有连接子网的终端的ip和mac地址。
+
+有时候可能在命令行结果中看不到mac地址，可以用`cat /proc/net/arp`查看对应ip的mac地址
+
+如果想获取更详细的信息，包括操作系统信息，端口开放信息，则可以使用`nmap -sP -A 192.168.26.0/24`。由于结果较长，在此不再截图。
+
+###### 伪造ip和mac地址
+
+假设攻击机为kali_b，从上面的信息中可以得知，靶机kali_a的ip为`192.168.26.129`，mac地址为`02:42:C0:A8:1A:81`，于是我们利用`ifconfig`命令可以设置攻击机的ip地址和mac地址：
+
+```
+root@9e984f59fa27:/# ifconfig eth0 down
+root@9e984f59fa27:/# ifconfig eth0 192.168.26.129 hw ether 02:42:C0:A8:1A:81
+root@9e984f59fa27:/# ifconfig eth0 up
+```
+
+同上，加上网关信息
+
+```
+root@9e984f59fa27:/# route add default gw 192.168.26.2
+```
+
+经过测试，我们尝试用两台机器同时运行`curl www.baidu.com`，另外同时运行 `apt update`，我们发现，两台机器都可以成功上网。
+
+我们分析，大概的原因是由于wifi没有加密机制造成的。路由器无法分辨两台机器，很有可能会把包都发给他们了，通过查询资料也证实了我们的猜测：[Ethernet: What happens if two devices connected to internet have same MAC address? Do they work well?](https://www.quora.com/Ethernet-What-happens-if-two-devices-connected-to-internet-have-same-MAC-address-Do-they-work-well)。但是我们认为，此行为是个未定义行为。如果两个机子正好在同一个信道，很可能两个机子相互干扰都上不了网，不在一个信道有可能是交替上网。由于有线网路由器通过MAC地址区分不同的设备，相同MAC地址会导致路由器频繁更新路由表，然后把包发到不同的地方，所以是交替上网甚至无法上网。而无线网这个行为将会更加的未定义，取决于路由器和机器。
