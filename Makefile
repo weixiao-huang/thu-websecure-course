@@ -1,3 +1,5 @@
+BUILD_DIR   := suricata
+
 IDS_IMAGE   := ids-image
 
 NETWORK     := ids-net
@@ -43,7 +45,7 @@ rm_gateway:
 	$(V)docker network rm $(NETWORK)
 
 build:
-	$(V)docker build -t $(IDS_IMAGE) ./ids
+	$(V)docker build -t $(IDS_IMAGE) $(BUILD_DIR)
 
 run:
 	$(V)$(call docker_run,$(CONT_IDS),$(IP_IDS),$(IDS_IMAGE))
