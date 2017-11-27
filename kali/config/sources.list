@@ -1,10 +1,10 @@
 #清华
-deb http://mirrors.tuna.tsinghua.edu.cn/kali kali-rolling main contrib non-free
-deb-src http://mirrors.tuna.tsinghua.edu.cn/kali kali-rolling main contrib non-free
+#deb http://mirrors.tuna.tsinghua.edu.cn/kali kali-rolling main contrib non-free
+#deb-src http://mirrors.tuna.tsinghua.edu.cn/kali kali-rolling main contrib non-free
 
 #中科大
-#deb http://mirrors.ustc.edu.cn/kali kali-rolling main non-free contrib
-#deb-src http://mirrors.ustc.edu.cn/kali kali-rolling main non-free contrib
+deb http://mirrors.ustc.edu.cn/kali kali-rolling main non-free contrib
+deb-src http://mirrors.ustc.edu.cn/kali kali-rolling main non-free contrib
 
 #浙大
 #deb http://mirrors.zju.edu.cn/kali kali-rolling main contrib non-free
