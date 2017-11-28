@@ -1,6 +1,10 @@
-BUILD_DIR   := ids
+V         = @
 
-IDS_IMAGE   := ids-image
+IDS_DIR     := ids
+CLIENT_DIR  := client
+
+IDS_IMAGE    := ids-image
+CLIENT_IMAGE := client-image
 
 NETWORK     := ids-net
 SUBNET      := 192.168.144.0/24
@@ -34,9 +38,8 @@ docker_run = docker run --network=$(NETWORK) --ip=$(2) $(DNSFLAG) $(PFLAGS) --na
 # container_name
 docker_exec = docker exec -it $(1) /bin/bash
 
-V         = @
 
-default: run net_config
+default: build run net_config
 
 create_gateway:
 	$(V)$(call docker_create_net,$(NETWORK),$(SUBNET),$(GATEWAY))
@@ -45,11 +48,12 @@ rm_gateway:
 	$(V)docker network rm $(NETWORK)
 
 build:
-	$(V)docker build -t $(IDS_IMAGE) $(BUILD_DIR)
+	$(V)docker build -t $(IDS_IMAGE) $(IDS_DIR)
+	$(V)docker build -t $(CLIENT_IMAGE) $(CLIENT_DIR)
 
 run:
 	$(V)$(call docker_run,$(CONT_IDS),$(IP_IDS),$(IDS_IMAGE))
-	$(V)$(call docker_run,$(CONT_CLIENT),$(IP_CLIENT),$(IDS_IMAGE))
+	$(V)$(call docker_run,$(CONT_CLIENT),$(IP_CLIENT),$(CLIENT_IMAGE))
 
 net_config:
 	$(V)docker network connect $(NETWORK2) $(CONT_IDS)
@@ -72,3 +76,5 @@ start:
 
 rm:
 	$(V)docker rm $(CONTS)
+
+clean: stop rm

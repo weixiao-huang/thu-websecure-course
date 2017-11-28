@@ -1,6 +1,6 @@
 FROM huangwx/snort3
 
-RUN apt-get update
-RUN apt-get install -y curl
+COPY snort/snort.lua /opt/snort/etc/snort/snort.lua
+COPY snort/rules/local.rules /opt/snort/etc/snort/rules/local.rules
 
 CMD ["/bin/bash"]

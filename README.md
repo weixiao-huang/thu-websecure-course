@@ -1,8 +1,8 @@
 # IDS逃逸实验
 
-李凯文 2014011756 工物40  黄维啸  力2
+李凯文 2014011756 工物40
 
-## 问题重述
+## 一、问题重述
 
 1、实验目的： 
 通过本次实验，深入理解TCP/IP协议的数据格式、TCP连接的建立和终止过程、对TCP连接的攻击方法、和逃逸技术。理解IDS过滤的原理，并设法绕过检测。
@@ -23,13 +23,13 @@
 官方文档 - http://www.secdev.org/projects/scapy/doc/
 非官方新手指南 - http://theitgeekchronicles.files.wordpress.com/2012/05/scapyguide1.pdf
 使用Scapy进行分片 - http://www.sans.org/reading-room/whitepapers/detection/ip-fragment-reassembly-scapy-33969
- snort 规则教程：http://snort.datanerds.net/writing_snort_rules.htm#first_example
+snort 规则教程：http://snort.datanerds.net/writing_snort_rules.htm#first_example
 
 提交实验报告、测试脚本，并准备在课堂上做演示。
 
-## 任务实现
+## 二、任务实现
 
-### 网络拓扑结构
+### 1. 网络拓扑结构
 
 网络拓扑结构采用作业文档中给出的结构，其中IDS上配置两块虚拟网卡，用docker实现，分别
 
@@ -47,30 +47,26 @@
 $ make create_gateway
 ```
 
-然后build出docker images
-
-```d
-$ make build
-```
-
-然后建立两个容器`client`和`ids`
+然后build并建立运行两个容器`client`和`ids`
 
 ```
-$ make run
+$ make
 ```
 
-Makefile中的`--dns`是为了让容器在国内访问外网更快一些。之后分别利用`docker exec`进入2容器：
+之后分别用下述命令进入`client`和`ids`
 
 ```
-$ make exec_a
-$ make exec_b
+$ make exec_client
+$ make exec_ids
 ```
 
-### IDS配置
+### 2. IDS配置
 
 我们尝试使用了多种IDS配置的软件，包括`snort`，`suricata`，`bro`等，在不同程度上进行了实现，具体的情况如下：
 
-#### Snort
+#### 2.1 IDS的踩坑之旅
+
+##### Snort 2.9
 
 `Snort`是作业推荐的工具，经过学习，我们给出了我们设置的`snort`规则，如下：
 
@@ -80,7 +76,7 @@ alert tcp any any -> any any (msg: "TCP [ALERT]!"; sid: 1000004;)
 
 但是出现的问题是，我们发现`snort`检测到的包都是从`server`发过来的包，而没有看到`client`发出的包，即使将`snort`规则中的`content`设置为空，设置为空格，设置为`|20|` 都不能看到`client`发出的`GET HTTP` 包。所以就无法匹配并发出`rst`包终止`TCP`连接。
 
-#### Suricata
+##### Suricata
 
 `Suricata` 是推荐网站上给出的比`snort`更加强大的工具，也是在使用`snort`并与助教和同学们交流之后仍然没有解决之后我们决定转向的工具。`Suricata`的规则撰写方式与`snort`相似，我们使用的`suricata`编写的规则为：
 
@@ -90,23 +86,81 @@ alert tcp any any -> any any (msg: "TCP [ALERT]!"; sid: 1000004;)
 
 这一次，我们成功在`suricata`的log文件tcp-data.log中看到了我们需要检测到的关键词，即看到了`GET HTTP`包的内容。
 
-但是，问题在于，我们在检测结果的log文件中，并没有看到`GET HTTP`这个包，而且很奇怪的是，只有在使用`Ctrl+C`终止`suricata`之后，才会看到`rst` 的包的记录。这个问题仍然使得我们无法实现`IDS`的功能。
+但是，问题在于，我们在检测结果的log文件中，并没有看到`GET HTTP`这个包，而且很奇怪的是，只有在使用`Ctrl+c`终止`suricata`之后，才会看到`rst` 的包的记录。这个问题仍然使得我们无法实现`IDS`的功能。
 
-#### Bro
+##### Bro
 
 在经过了`snort`和`suricata`的奇怪错误之后，我们转向了更加基础而强大的工具——`Bro`，`Bro`所定义的`Bro script`是一个很强大的工具，在专业研究人员中比较常用，但是学习曲线比较陡峭，对新手友好程度相对较低。
 
-在经过学习之后，我们给出的`Bro`的`Bro Script`参见附件。
+在经过学习之后，我们给出的`Bro`的`Bro Script`如下
 
-现在，Bro可以检测到我们需要检测的关键词，比如`http://lab.jinzihao.me/extrahighlatency/?time=3`中，我们使用`jinzihao`作为关键词。
+```bro
+event tcp_packet (c: connection, is_orig: bool, flags: string, seq: count, ack: count, len: count, payload: string) {
+    if (/jinzihao/ in payload) {
+        print fmt("tcp packet: from <%s:%s, %s> to <%s:%s, %s>", c$id$orig_h, port_to_count(c$id$orig_p), seq, c$id$resp_h, port_to_count(c$id$resp_p), seq + len);
+    }
+}
+```
+
+利用
+
+```shell
+$ bro -i eth1 -C main.bro
+```
+
+可以利用Bro来监控流量，于是现在，Bro可以检测到我们需要检测的关键词，比如`http://lab.jinzihao.me/extrahighlatency/?time=3`中，我们使用`jinzihao`作为关键词。
 
 但是，`Bro`又出现了另一个问题，即难以发出`rst`包，在经过努力查找之后，我们找到了一个叫做`bro-aux`的`Bro`的插件，里面含有一个叫做`rst`的组件，但是，由于`Bro script`难以调用命令行的指令，所以还是不能实现检测到之后终止`TCP`连接的功能。
 
+总体上看，我们尝试了多种`IDS`软件，但是他们都有着这样那样的问题，均实现了目标`IDS`的部分功能，但是没有一个工具能够实现完整的`检测-匹配-终止`全过程的功能，`Snort2`和`Suricata`可以很容易实现向两端发rst包，但是难以探测到包，`Bro`可以探测一切流量，但是却极其难向两端发rst包。
 
+#### 2.2 终极解决方案——Snort 3.0.0
 
-总体上看，我们尝试了多种`IDS`软件，但是他们都有着这样那样的问题，均实现了目标`IDS`的部分功能，但是没有一个工具能够实现完整的`检测-匹配-终止`全过程的功能。
+在多次尝试失败之后，在绝望中，我们又回到了snort，但是这次，我们不再尝试古老的snort 2，由于cisco对于snort进行了完完全全的重写，于是Snort 3诞生了，我们就开始尝试使用Snort 3。
 
+Snort 3的使用是十分难过的，首先安装十分的困难，Google找了很久，终于找到了一份安装教程：[Installing Snort++ in Ubuntu (Version 3.0 Alpha 4 build 239)](https://sublimerobots.com/2017/08/installing-snort-3-b239-in-ubuntu/)，根据这个我们编写了docker-snort3的`Dockerfile`，详情见代码中的`snort3-build`目录。
 
+然而，比起下面的工作，安装已经是很简单的事情了，关键在于snort 3几乎把snort 2完全重写了，因此太多不兼容的规则，然而网上资料及其的少，我们唯一能参考的只有Snort官网上的Snort 3的manual。
+
+最终我们编写的snort规则如代码`ids/snort/rules/local.rules`所示，主要规则如下：
+
+```
+reject tcp any any -> any any (msg: "JINZIHAO [REJECT]"; content: "jinzihao"; sid: 1000010;)
+reject tcp any any -> any any (msg: "BAIDU [REJECT]"; content: "baidu"; sid: 1000011;)
+reject tcp any any -> any any (msg: "MITMPROXY [REJECT]"; content: "mitmproxy"; sid: 1000012;)
+```
+
+其中我们还在`ids/snort/snort.lua`中添加了以下配置：
+
+```Lua
+reject = { 
+    reset = 'both',
+}
+```
+
+此配置使得snort3在执行reject操作的时候，向两侧发rst包。
+
+然而我们以为结束了，其实没那么简单，snort启动也是有坑的，要使得`reject`生效，必须运行在`inline`模式，而且`daq`的模式必须为`afpacket`。因此要在`ids`容器中运行`snort`，则在容器中输入下属命令即可：
+
+```Shell
+$ snort -c snort.lua -R rules/local.rules -i eth0:eth1 -A alert_fast -k none --daq afpacket -Q
+```
+
+其中`--daq afpacket -Q` 必不可少。
+
+在`ids`中运行`snort`之后，我们及可以在`client`容器中利用下述命令发GET请求：
+
+```shell
+$ curl http://lab.jinzihao.me/extrahighlatency/?time=3
+$ curl www.baidu.com
+$ curl http://web.mit.edu/mitmproxy.org
+```
+
+于是可以得到下述结果，其中，顶部为`client`，底部为`ids`。可以看到，`ids`检测到`jinzihao`关键词之后，就会向两侧发起RST，使得tcp连接断开
+
+![2.2.1-ids-reject](./img/ids-reject.png)
+
+另外我们还发现，用snort 3和docker并没有出现其他同学说的snort速度慢的问题，我们无论是`curl`高延时的网站还是低延时的baidu，都会被reject掉。
 
 ### 绕过策略
 
@@ -120,4 +174,9 @@ alert tcp any any -> any any (msg: "TCP [ALERT]!"; sid: 1000004;)
 
 对于一个即将发出去的`scapy`包，我们使用`split`函数进行处理，迭代进行检测关键词是否存在，如果存在，则在关键词中将整个`payload`分成两部分，并且切分位置要是8的倍数。将左侧放入一个`IP packet`中，并将`flags`置为`1`，将`frag`设为当前`payload`的开头，然后对右侧剩余的部分继续检测和拆分。最后，没有了关键词后，将最后的一个`payload`装入`IP`包，病设置`flags`为0，而`frag`为最后一个`payload`的开头。
 
-具体的实现参加脚本`split.py`。
+具体的实现参见脚本`client/src/split.py`。
+
+## 参考资料
+
+1. [Installing Snort++ in Ubuntu (Version 3.0 Alpha 4 build 239)](https://sublimerobots.com/2017/08/installing-snort-3-b239-in-ubuntu/)
+2. ​
