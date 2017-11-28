@@ -1,4 +1,4 @@
-BUILD_DIR   := suricata
+BUILD_DIR   := ids
 
 IDS_IMAGE   := ids-image
 
