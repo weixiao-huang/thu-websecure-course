@@ -59,6 +59,8 @@ net_config:
 	$(V)docker network connect $(NETWORK2) $(CONT_IDS)
 	$(V)$(call docker_exec,$(CONT_CLIENT)) -c "route del default gw $(GATEWAY)"
 	$(V)$(call docker_exec,$(CONT_CLIENT)) -c "route add default gw $(IP_IDS)"
+#	$(V)$(call docker_exec,$(CONT_IDS)) -c \
+#		"iptables -A OUTPUT -p tcp --tcp-flags RST RST -s $(IP_CLIENT) -j DROP"
 	$(V)$(call docker_exec,$(CONT_IDS)) -c \
 		"iptables -t nat -A POSTROUTING -s $(SUBNET) -d 0.0.0.0/0 -o eth1 -j MASQUERADE"
 
