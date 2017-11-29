@@ -16,9 +16,7 @@ IP_IDS      := 192.168.144.131
 CONT_CLIENT := client
 IP_CLIENT   := 192.168.144.130
 
-NETWORK2    := ids-outer-net
-SUBNET2     := 192.168.53.0/24
-GATEWAY2    := 192.168.53.2
+NETWORK2    := bridge
 
 # DNS Settings
 DNS1    = 223.5.5.5
@@ -44,10 +42,9 @@ default: build run net_config
 
 create_gateway:
 	$(V)$(call docker_create_net,$(NETWORK),$(SUBNET),$(GATEWAY))
-	$(V)$(call docker_create_net,$(NETWORK2),$(SUBNET2),$(GATEWAY2))
 
 rm_gateway:
-	$(V)docker network rm $(NETWORK) $(NETWORK2)
+	$(V)docker network rm $(NETWORK)
 
 build:
 	$(V)docker build -t $(IDS_IMAGE) $(IDS_DIR)
