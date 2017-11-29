@@ -9,5 +9,3 @@ RUN pip3 install -i https://pypi.tuna.tsinghua.edu.cn/simple scapy-python3
 
 COPY src/ /usr/src/app/
 WORKDIR /usr/src/app
-
-#ENV LANG=en_US.UTF-8
