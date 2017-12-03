@@ -1,0 +1,3 @@
+reject tcp any any -> any any (msg: "JINZIHAO TCP [ALERT]"; sid: 1000001; content: "jinzihao";)
+reject tcp any any -> any any (msg: "BAIDU TCP [ALERT]"; sid: 1000002; content: "baidu";)
+reject tcp any any -> any any (msg: "MITMPROXY TCP [ALERT]"; sid: 1000003; content: "mitmproxy";)

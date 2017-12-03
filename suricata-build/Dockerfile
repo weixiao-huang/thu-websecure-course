@@ -4,11 +4,11 @@ COPY ./config/sources.list /etc/apt/
 RUN apt-get clean
 RUN apt-get -y update && apt-get -y upgrade && apt-get -y dist-upgrade
 
-RUN apt-get install -y suricata tcpdump
+RUN apt-get install -y suricata
 
 WORKDIR /etc/suricata
 
 COPY suricata/suricata.yaml .
-COPY suricata/rules/ ./rules/
 
-CMD ["suricata", "-c", "suricata.yaml", "-q", "0"]
+CMD ["/bin/bash"]
+# CMD ["suricata", "-c", "suricata.yaml", "-q", "0"]
