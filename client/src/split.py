@@ -55,16 +55,28 @@ def get(host, url='/'):
 
 
 def get_by_split(keyword, host, url='/'):
+    target = (host, url)
+    dport = 80
+    sport = random.randrange(0, 2**16)
     # send syn
-    syn = IP(dst=host) / TCP(dport=80, flags='S')
+    l4 = IP(dst=host) / TCP(sport=sport, dport=dport, flags=0, seq=random.randrange(0, 2**32))
+    l4[TCP].flags = 'S'
+
     # get synack
-    syn_ack = sr1(syn)
+    syn_ack = sr1(l4)
+    l4[TCP].flags = 'A'
+
+    # send ack
+    l4[TCP].seq += 1
+    l4[TCP].ack = syn_ack[TCP].seq + 1
+    send(l4)
     
     getStr = 'GET %s HTTP/1.1\r\nHost: %s\r\n\r\n' % (url, host)
+    l4[TCP].flags = 'PA'
     # send ack and package
-    request = IP(dst=host) / TCP(dport=80, sport=syn_ack[TCP].dport,
-                 seq=syn_ack[TCP].ack, ack=syn_ack[TCP].seq + 1, flags='A') / getStr
-    pkts = split(request, keyword)
+    # request = IP(dst=host) / TCP(dport=80, sport=syn_ack[TCP].dport,
+                #  seq=syn_ack[TCP].ack, ack=syn_ack[TCP].seq + 1, flags='PA') / getStr
+    pkts = split(l4/getStr, keyword)
     pkts.show()
 
     sendpkts(pkts)

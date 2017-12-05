@@ -133,7 +133,7 @@ class TcpHandshake(object):
 
 if __name__=='__main__':
     host = '192.168.53.131'
-    url = '/mitmproxy.html'
+    url = '/mitmproxy'
     getStr = 'GET %s HTTP/1.1\r\nHost: %s\r\n\r\n' % (url, host)
     logging.basicConfig(level=logging.DEBUG)
     logger.setLevel(logging.DEBUG)
