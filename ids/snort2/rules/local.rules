@@ -1,3 +1,3 @@
-reject tcp any any -> any any (msg: "JINZIHAO [REJECT]"; content: "jinzihao"; sid: 1000010;)
-reject tcp any any -> any any (msg: "BAIDU [REJECT]"; content: "baidu"; sid: 1000011;)
-reject tcp any any -> any any (msg: "MITMPROXY [REJECT]"; content: "mitmproxy"; sid: 1000012;)
+alert tcp any any -> any any (msg: "JINZIHAO [REJECT]"; content: "jinzihao"; sid: 1000010; resp: rst_all;)
+alert tcp any any -> any any (msg: "BAIDU [REJECT]"; content: "baidu"; sid: 1000011; resp: rst_all;)
+alert tcp any any -> any any (msg: "MITMPROXY [REJECT]"; content: "mitmproxy"; sid: 1000012; resp: rst_all;)

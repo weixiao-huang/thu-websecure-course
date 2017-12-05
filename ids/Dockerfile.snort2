@@ -1,10 +1,11 @@
 FROM huangwx/snort2
 
+RUN apt-get update -y
+RUN apt-get install -y tcpdump
+
 WORKDIR /etc/snort
 COPY snort2/snort.conf .
 COPY snort2/rules/ ./rules/
 
-RUN apt-get update -y
-RUN apt-get install -y tcpdump
-
 CMD ["/bin/bash"]
+# CMD ["snort", "-Q", "--daq", "nfq", "-c", "snort.conf", "--daq-var"]

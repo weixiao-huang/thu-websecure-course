@@ -1,14 +1,22 @@
-FROM kalilinux/kali-linux-docker
+FROM huangwx/snort3
 
-COPY ./config/sources.list /etc/apt/
-RUN apt-get clean
-RUN apt-get -y update && apt-get -y upgrade && apt-get -y dist-upgrade
+RUN apt-get update -y
+RUN apt-get install -y tcpdump
 
-RUN apt-get install -y suricata tcpdump
+WORKDIR /tmp
+RUN wget https://github.com/snortadmin/snort3/archive/master.tar.gz
+RUN tar -xvzf master.tar.gz
+WORKDIR /tmp/snort3-master/extra
+RUN autoreconf -isvf
+ENV PKG_CONFIG_PATH=/opt/snort/lib/pkgconfig
+RUN ./configure --prefix=/opt/snort && make && make install
 
-WORKDIR /etc/suricata
+WORKDIR /opt/snort/etc/snort
+RUN rm -rf /tmp/*
 
-COPY suricata/suricata.yaml .
-COPY suricata/rules/ ./rules/
+COPY snort3/snort.lua /opt/snort/etc/snort/snort.lua
+COPY snort3/rules/local.rules /opt/snort/etc/snort/rules/local.rules
 
-CMD ["suricata", "-c", "suricata.yaml", "-q", "0"]
+# CMD ["/bin/bash"]
+# CMD snort -c snort.lua -R rules/local.rules -i eth0:eth1 -A alert_fast -k none --daq afpacket -Q
+CMD snort -c snort.lua -R rules/local.rules -A alert_fast -k none --daq nfq -Q --plugin-path /opt/snort/lib/snort_extra

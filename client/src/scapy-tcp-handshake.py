@@ -83,6 +83,7 @@ class TcpHandshake(object):
     def hack(self, pkt):
         rst = self.l4.copy()
         rst[TCP].flags = "R"
+        rst[TCP].seq -= 1
         ack = self.l4.copy()
         ack[TCP].flags = "A"
         ack[TCP].seq = pkt[TCP].ack
@@ -131,10 +132,9 @@ class TcpHandshake(object):
         self.l4[TCP].seq += 1
 
 if __name__=='__main__':
-    host = 'baidu.com'
-    url = '/'
+    host = '192.168.53.131'
+    url = '/mitmproxy.html'
     getStr = 'GET %s HTTP/1.1\r\nHost: %s\r\n\r\n' % (url, host)
-    getStr = 'INTENTIONAL BAD REQUEST\r\n\r\n\r\n'
     logging.basicConfig(level=logging.DEBUG)
     logger.setLevel(logging.DEBUG)
     conf.verb = 0

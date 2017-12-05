@@ -1,0 +1,16 @@
+FROM kalilinux/kali-linux-docker
+
+COPY ./config/sources.list /etc/apt/
+RUN apt-get clean
+RUN apt-get -y update && apt-get -y upgrade && apt-get -y dist-upgrade
+
+RUN apt-get install -y suricata tcpdump
+
+WORKDIR /etc/suricata
+
+COPY suricata/suricata.yaml .
+COPY suricata/rules/ ./rules/
+
+WORKDIR /var/log/suricata
+
+CMD ["suricata", "-c", "/etc/suricata/suricata.yaml", "-q", "0"]
