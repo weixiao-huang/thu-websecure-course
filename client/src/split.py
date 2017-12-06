@@ -7,28 +7,39 @@ def split(ippacket, keyword):
     data = ippacket.load
     pos = data.find(keyword.encode('utf-8'))
     cur = 0
+    first = True
     while pos >= 0:
-        cut = pos + len(keyword) - 1 - (pos + len(keyword) - 1) % 8
+        cut = pos + len(keyword) - 1 - (pos + len(keyword) + 3) % 8
         if (cut <= pos):
             print("Error! This data can not escape the IDS by splitting.")
             return
 
         leftdata = data[:cut]
         data = data[cut:]
-
+        cur = cur + cut
         leftpkt = ippacket.copy()
-        leftpkt.load = leftdata
+        if not first:
+            leftpkt.remove_payload()
+            first = False
+            leftpkt.frag = int((cur + 20) / 8)
+        else:
+            leftpkt[TCP].remove_payload()
+            leftpkt.frag = 0
+        leftpkt /= leftdata
         leftpkt.flags = "MF"
-        leftpkt.frag = int(cur / 8)
+        leftpkt.proto = 'tcp'
+
         pkts.append(leftpkt)
-        cur = cur + cut;
+
 
         pos = data.find(keyword.encode('utf-8'))
 
     endpkt = ippacket.copy()
-    endpkt.load = data
+    endpkt.remove_payload()
+    endpkt /= data
     endpkt.flags = 0
-    endpkt.frag = int(cur / 8)
+    endpkt.frag = int((cur + 20) / 8)
+    endpkt.proto = 'tcp'
     pkts.append(endpkt)
     return pkts
 
