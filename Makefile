@@ -61,7 +61,11 @@ PFLAGS  := -itd --privileged
 docker_create_net = docker network create --subnet=$(2) --gateway=$(3) $(1)
 
 # container_name, container_ip, image_name
-docker_run = docker run --network=$(4) --ip=$(2) $(DNSFLAG) $(PFLAGS) --name=$(1) $(3)
+docker_run = docker run \
+	--network=$(4) --ip=$(2) \
+	$(DNSFLAG) $(PFLAGS) \
+	-v $(CURDIR)/$(5)/src:/usr/src/app \
+	--name=$(1) $(3)
 
 # container_name
 docker_exec = docker exec -it $(1) /bin/bash
@@ -83,20 +87,20 @@ build:
 	$(V)docker build -t $(SERVER_IMAGE) $(SERVER_DIR)
 
 run:
-	$(V)$(call docker_run,$(CONT_IDS),$(IP_IDS),$(IDS_IMAGE),$(NETWORK))
-	$(V)$(call docker_run,$(CONT_CLIENT),$(IP_CLIENT),$(CLIENT_IMAGE),$(NETWORK))
-	$(V)$(call docker_run,$(CONT_SERVER),$(IP_SERVER),$(SERVER_IMAGE),$(NETWORK2))
+	$(V)$(call docker_run,$(CONT_IDS),$(IP_IDS),$(IDS_IMAGE),$(NETWORK),$(IDS_DIR))
+	$(V)$(call docker_run,$(CONT_CLIENT),$(IP_CLIENT),$(CLIENT_IMAGE),$(NETWORK),$(CLIENT_DIR))
+	$(V)$(call docker_run,$(CONT_SERVER),$(IP_SERVER),$(SERVER_IMAGE),$(NETWORK2),$(SERVER_DIR))
 	$(V)docker network connect --ip=$(IP_IDS2) $(NETWORK2) $(CONT_IDS)
 
 net_config:
 	$(V)$(call docker_exec,$(CONT_CLIENT)) -c "route del default gw $(GATEWAY)"
 	$(V)$(call docker_exec,$(CONT_CLIENT)) -c "route add default gw $(IP_IDS)"
-# 	$(V)$(call docker_exec,$(CONT_IDS)) -c \
- 		"iptables -A OUTPUT -p tcp --tcp-flags RST RST -j DROP"
 	$(V)$(call docker_exec,$(CONT_IDS)) -c \
 		"iptables -t nat -A POSTROUTING -s $(SUBNET) -d 0.0.0.0/0 -o eth1 -j MASQUERADE"
 	$(V)$(call docker_exec,$(CONT_IDS)) -c \
 		"iptables -I FORWARD -j NFQUEUE"
+	$(V)$(call docker_exec,$(CONT_CLIENT)) -c \
+ 		"iptables -A OUTPUT -p tcp --tcp-flags RST RST -j DROP"
 
 exec_ids:
 	$(V)$(call docker_exec,$(CONT_IDS))
