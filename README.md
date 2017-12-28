@@ -160,21 +160,59 @@ $ curl http://web.mit.edu/mitmproxy.org
 
 另外我们还发现，用snort 3和docker并没有出现其他同学说的snort速度慢的问题，我们无论是`curl`高延时的网站还是低延时的baidu，都会被reject掉。
 
-### 绕过策略
+### 3. 绕过策略
 
-我们使用`scapy`实现了`IP`分片来躲避`IDS`检测的功能。
+####3.1 IP`分片
 
-实际上，真正的很多`IDS`是有将分片后的`IP`包重组之后再进行关键词检测的功能的，而遇到这种`IDS`时，我们可以采取文献 `http://www.sans.org/reading-room/whitepapers/detection/ip-fragment-reassembly-scapy-33969`中给出的通过`IP`分片中内容有重叠时的未定义行为，不同的操作系统采取了不同的处理方式，有的是采用先到的数据，有的是采用后到达的数据等等。定向攻击`IDS`没有采用而`server`采取的重组策略，这样`IDS`恢复出的数据与实际上服务器接收到的数据不同，就可以实现绕过`IDS`的检测。
+​        我们使用`scapy`实现了`IP`分片来躲避`IDS`检测的功能。
 
-我们这里只是实现了`IP`分片，后面的时间主要都用在配置`IDS`上面。实际上，想要实现以上机制是比较容易的——只需要在发包之前自行对关键词进行检测，然后在需要的位置设置随机填充，使得目标`server`能够接收到正确的信息，而`IDS`重组出的数据是错误的。
+​        实际上，真正的很多`IDS`是有将分片后的`IP`包重组之后再进行关键词检测的功能的，而遇到这种`IDS`时，我们可以采取文献 `http://www.sans.org/reading-room/whitepapers/detection/ip-fragment-reassembly-scapy-33969`中给出的通过`IP`分片中内容有重叠时的未定义行为，不同的操作系统采取了不同的处理方式，有的是采用先到的数据，有的是采用后到达的数据等等。定向攻击`IDS`没有采用而`server`采取的重组策略，这样`IDS`恢复出的数据与实际上服务器接收到的数据不同，就可以实现绕过`IDS`的检测。
 
-以下对分片算法做简单的说明：
+我们这里只是实现了`IP`分片，后面的时间主要都用在配置`IDS`上面。实际上，想要实现以上机制是比较容易的——只需要在发包之前自行对关键词进行检测，然后在需要的位置设置随机填充，使得目标`server`能够接收到正确的信息，而`IDS`重组出的数据是错误的。但是如果IDS足够快而且强大，能够在很短的时间内完成五种重组方式的检测，那么文献中提到的这种方法将会是失效的。在本次作业中，主要实现了`IP`分片，而对重组机制没有做相应的处理。
 
-对于一个即将发出去的`scapy`包，我们使用`split`函数进行处理，迭代进行检测关键词是否存在，如果存在，则在关键词中将整个`payload`分成两部分，并且切分位置要是8的倍数。将左侧放入一个`IP packet`中，并将`flags`置为`1`，将`frag`设为当前`payload`的开头，然后对右侧剩余的部分继续检测和拆分。最后，没有了关键词后，将最后的一个`payload`装入`IP`包，病设置`flags`为0，而`frag`为最后一个`payload`的开头。
+​        以下对分片算法做简单的说明：
 
-具体的实现参见脚本`client/src/split.py`。
+​        对于一个即将发出去的`scapy`包，我们使用`split`函数进行处理，迭代进行检测关键词是否存在，如果存在，则在关键词中将整个`payload`分成两部分，并且切分位置要是8的倍数。将左侧放入一个`IP packet`中，并将`flags`置为`1`，将`frag`设为当前`payload`的开头，然后对右侧剩余的部分继续检测和拆分。最后，没有了关键词后，将最后的一个`payload`装入`IP`包，并设置`flags`为0，而`frag`为最后一个`payload`的开头。
+
+​        具体的实现参见脚本`client/src/split.py`。
+
+​        实现的流程和结果如下：
+
+1. 建立`TCP`连接的三次“握手”
+
+   ​        使用`scapy`实现与服务器`docker`容器的连接，服务器`docker`容器的`IP`地址为`192.168.53.131`，具体的服务器实现代码可参看`server/src/server.py`，其提供了三个可以连接的网址：`192.168.53.131/`，`192.168.53.131/mitmproxy`和`192.168.53.131/mit`，第一个可以正常访问，因为地址和返回内容都没有关键词`mitmproxy`，不会被`IDS`拦截；第二个的地址有关键词`mitmproxy`，会被`IDS`拦截，而返回内容没有；第三个地址没有关键词，而返回内容有关键词`mitmproxy`，所以只有返回内容的`packet`会被`IDS`拦截。
+
+   ​        实现三次“握手”的结果截图如下：
+
+   ![3.1.1-tcp-shake-hands](./img/shakehands.png)
+
+2. 使用`scapy`进行`IP`分片
+
+   ​        按照上面所讲的方法进行`IP`分片，访问地址为`192.168.53.131/mitmproxy`，在不进行分片时发出的`GET`包如下所示：
+
+   ![3.1.2-no-ip-fragment](./img/before_fragment.png)
+
+   ​        在进行`IP`分片后，得到的两个分片后的包如下：
+
+   ![3.1.3-after-ip-fragment](./img/after_fragment.png)
+
+   ​        而经过`IP`包的重组之后得到的包如下：
+
+   ![3.1.4-after-reassembly](./img/after_reassembly.png)
+
+   ​        对比不进行分片的包和进行分片后重组得到的包，我们可以发现，两个包的`payload`是相同的，前面的`IP`头和`TCP`头的地址等也相同，说明分片成功。
+
+3. 将`IDS`的`IP`重组检测关闭，再次进行实验，得到绕过后的结果。
+
+   ![3.1.5-ip-fragment-result](./img/ip-result.png)
+
+   由此可见，绕过成功。
+#### 3.2 Socks 5
+
+socks 5 related content
 
 ## 参考资料
 
 1. [Installing Snort++ in Ubuntu (Version 3.0 Alpha 4 build 239)](https://sublimerobots.com/2017/08/installing-snort-3-b239-in-ubuntu/)
-2. ​
+2. [Baggett, Mark. "IP fragment reassembly with scapy." *SANS Institute InfoSec Reading Room* (2012).](https://www.sans.org/reading-room/whitepapers/tools/ip-fragment-reassembly-scapy-33969)
+3. [Maxwell, Adam. "The very unofficial dummies guide to Scapy." *Retrieved from* (2013).](https://theitgeekchronicles.files.wordpress.com/2012/05/scapyguide1.pdf)
