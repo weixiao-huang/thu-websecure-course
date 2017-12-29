@@ -1,5 +1,7 @@
 # IDS逃逸实验
 
+---
+
 ## 一、问题重述
 
 1、实验目的： 
@@ -25,42 +27,21 @@ snort 规则教程：http://snort.datanerds.net/writing_snort_rules.htm#first_ex
 
 提交实验报告、测试脚本，并准备在课堂上做演示。
 
+
+
 ## 二、任务实现
 
-### 1. 网络拓扑结构
+### 1. 初步网络拓扑结构
 
-网络拓扑结构采用作业文档中给出的结构，其中IDS上配置两块虚拟网卡，用docker实现，分别
+网络拓扑结构采用作业文档中给出的结构，如下图所示：
 
-![1.1 - Network](./img/Network.png)
+![1.1 - Network](./img/net.png)
 
-其中，server端使用靳子豪同学提供的能够自定义延时时间的网址:
-
-`http://lab.jinzihao.me/extrahighlatency/?time=3`
-
-而client和IDS分别为一个docker container。类似于前面两次作业的情况，我们提供了Makefile来创建docker image和docker container。
-
-首先创建网络
-
-```
-$ make create_gateway
-```
-
-然后build并建立运行两个容器`client`和`ids`
-
-```
-$ make
-```
-
-之后分别用下述命令进入`client`和`ids`
-
-```
-$ make exec_client
-$ make exec_ids
-```
+其中IDS上配置两块虚拟网卡`eth0`和`eth1`，而`client`、`IDS`和`server`分别为一个docker container。类似于前面两次作业的情况，我们提供了`Makefile`来创建 docker image 和 docker container。
 
 ### 2. IDS配置
 
-我们尝试使用了多种IDS配置的软件，包括`snort`，`suricata`，`bro`等，在不同程度上进行了实现，具体的情况如下：
+我们尝试使用了多种IDS配置的软件，包括`snort`，`suricata`，`bro`等，在不同程度上进行了实现，在 2.1 和 2.2 中，我们服务器用的是靳子豪同学的高延时网站：http://lab.jinzihao.me/extrahighlatency/?time=3。具体的情况如下：
 
 #### 2.1 IDS的踩坑之旅
 
@@ -112,13 +93,13 @@ $ bro -i eth1 -C main.bro
 
 总体上看，我们尝试了多种`IDS`软件，但是他们都有着这样那样的问题，均实现了目标`IDS`的部分功能，但是没有一个工具能够实现完整的`检测-匹配-终止`全过程的功能，`Snort2`和`Suricata`可以很容易实现向两端发rst包，但是难以探测到包，`Bro`可以探测一切流量，但是却极其难向两端发rst包。
 
-#### 2.2 终极解决方案——Snort 3.0.0
+#### 2.2 Snort 3.0.0的探索（afpacket模式）
 
 在多次尝试失败之后，在绝望中，我们又回到了snort，但是这次，我们不再尝试古老的snort 2，由于cisco对于snort进行了完完全全的重写，于是Snort 3诞生了，我们就开始尝试使用Snort 3。
 
 Snort 3的使用是十分难过的，首先安装十分的困难，Google找了很久，终于找到了一份安装教程：[Installing Snort++ in Ubuntu (Version 3.0 Alpha 4 build 239)](https://sublimerobots.com/2017/08/installing-snort-3-b239-in-ubuntu/)，根据这个我们编写了docker-snort3的`Dockerfile`，详情见代码中的`snort3-build`目录。
 
-然而，比起下面的工作，安装已经是很简单的事情了，关键在于snort 3几乎把snort 2完全重写了，因此太多不兼容的规则，然而网上资料及其的少，我们唯一能参考的只有Snort官网上的Snort 3的manual。
+然而，比起下面的工作，安装已经是很简单的事情了，关键在于 snort 3 几乎把 snort 2 完全重写了，因此太多不兼容的规则，然而网上资料及其的少，我们唯一能参考的只有Snort官网上的Snort 3的manual。
 
 最终我们编写的snort规则如代码`ids/snort/rules/local.rules`所示，主要规则如下：
 
@@ -154,65 +135,223 @@ $ curl www.baidu.com
 $ curl http://web.mit.edu/mitmproxy.org
 ```
 
-于是可以得到下述结果，其中，顶部为`client`，底部为`ids`。可以看到，`ids`检测到`jinzihao`关键词之后，就会向两侧发起RST，使得tcp连接断开
+于是可以得到下述结果，其中，顶部为`client`，底部为`ids`。可以看到，`ids`检测到`jinzihao`关键词之后，就会向两侧发起 RST，使得 TCP 连接断开
 
 ![2.2.1-ids-reject](./img/ids-reject.png)
 
-另外我们还发现，用snort 3和docker并没有出现其他同学说的snort速度慢的问题，我们无论是`curl`高延时的网站还是低延时的baidu，都会被reject掉。
+另外我们还发现，用 snort 3 和 docker 并没有出现其他同学说的 snort 速度慢的问题，我们无论是`curl`高延时的网站还是低延时的baidu，都会被reject掉。
+
+然而，经过我们的仔细分析，我们发现，snort 3运行在此模式下， 不仅`client`会向`server`建立 TCP 连接，`IDS`会额外再建立一条到`server`的连接，于是，当`IDS`检测到关键词之后，`IDS`发送的 RST 只断开了`client`和`server`的 TCP 连接，而`IDS`到`server`的 TCP 的连接并没有断开，于是，服务器依然会回应请求给`IDS`，而`IDS`收到这个消息依然会发给`client`，由于`client`和`server`的 TCP 连接断开了，所以这条返回消息不会回给`curl`，但是我们用`tcpdump`可以抓到这个包。
+
+#### 2.3 终极解决方案——`NFQ`模式
+
+后来，我们经过各种查阅资料了解到，`Linux`有一种模式叫做`nfqueue`模式，可以在用户态获得网络流量，并对流量进行操作和裁决。而`snort2`、`suricata`和`snort3`都是支持这种模式的。因此我们之后考虑用这个模式。
+
+用这个模式首先我们需要在`IDS`中设置流量走NFQEUEU：
+
+```bash
+$ iptables -I FORWARD -j NFQUEUE
+```
+
+由于`IDS`设置了`NFQ`模式，因此必须要打开防火墙才能访问其他网站，注意此时防火墙的启动方式也有了改变，以`snort3`为例：
+
+```Bash
+$ snort -c snort.lua -R rules/local.rules -A alert_fast -k none --daq nfq -Q --plugin-path /opt/snort/lib/snort_extra
+```
+
+其他防火墙的启动方式可以参考`ids`文件夹下对应的`Dockerfile`。这里注意的是，要使得`snort2`和`snort3`支持`NFQ`模式，必须保证 Linux 中安装`libnetfilter-queue`等依赖项，具体构建过程可以查看源代码中的`snort2-build`和`snort3-build`文件夹中的`Dockerfile`
+
+之后我们即可以成功的搭建防火墙了。防火墙的测试方法见后文的实验过程。
 
 ### 3. 绕过策略
 
-####3.1 IP`分片
+#### 3.1 `IP`分片
 
-​        我们使用`scapy`实现了`IP`分片来躲避`IDS`检测的功能。
+我们使用`scapy`实现了`IP`分片来躲避`IDS`检测的功能。
 
-​        实际上，真正的很多`IDS`是有将分片后的`IP`包重组之后再进行关键词检测的功能的，而遇到这种`IDS`时，我们可以采取文献 `http://www.sans.org/reading-room/whitepapers/detection/ip-fragment-reassembly-scapy-33969`中给出的通过`IP`分片中内容有重叠时的未定义行为，不同的操作系统采取了不同的处理方式，有的是采用先到的数据，有的是采用后到达的数据等等。定向攻击`IDS`没有采用而`server`采取的重组策略，这样`IDS`恢复出的数据与实际上服务器接收到的数据不同，就可以实现绕过`IDS`的检测。
+实际上，真正的很多`IDS`是有将分片后的`IP`包重组之后再进行关键词检测的功能的，而遇到这种`IDS`时，我们可以采取文献 `http://www.sans.org/reading-room/whitepapers/detection/ip-fragment-reassembly-scapy-33969`中给出的通过`IP`分片中内容有重叠时的未定义行为，不同的操作系统采取了不同的处理方式，有的是采用先到的数据，有的是采用后到达的数据等等。定向攻击`IDS`没有采用而`server`采取的重组策略，这样`IDS`恢复出的数据与实际上服务器接收到的数据不同，就可以实现绕过`IDS`的检测。
 
-我们这里只是实现了`IP`分片，后面的时间主要都用在配置`IDS`上面。实际上，想要实现以上机制是比较容易的——只需要在发包之前自行对关键词进行检测，然后在需要的位置设置随机填充，使得目标`server`能够接收到正确的信息，而`IDS`重组出的数据是错误的。但是如果IDS足够快而且强大，能够在很短的时间内完成五种重组方式的检测，那么文献中提到的这种方法将会是失效的。在本次作业中，主要实现了`IP`分片，而对重组机制没有做相应的处理。
+以下对分片算法做简单的说明：
 
-​        以下对分片算法做简单的说明：
+对于一个即将发出去的`scapy`包，我们使用`split`函数进行处理，迭代进行检测关键词是否存在，如果存在，则在关键词中将整个`payload`分成两部分，并且切分位置要是8的倍数。将左侧放入一个`IP packet`中，并将`flags`置为`1`，将`frag`设为当前`payload`的开头，然后对右侧剩余的部分继续检测和拆分。最后，没有了关键词后，将最后的一个`payload`装入`IP`包，并设置`flags`为0，而`frag`为最后一个`payload`的开头。
 
-​        对于一个即将发出去的`scapy`包，我们使用`split`函数进行处理，迭代进行检测关键词是否存在，如果存在，则在关键词中将整个`payload`分成两部分，并且切分位置要是8的倍数。将左侧放入一个`IP packet`中，并将`flags`置为`1`，将`frag`设为当前`payload`的开头，然后对右侧剩余的部分继续检测和拆分。最后，没有了关键词后，将最后的一个`payload`装入`IP`包，并设置`flags`为0，而`frag`为最后一个`payload`的开头。
+具体的实现参见脚本`client/src/scapy/split.py`，主要实现函数为其中的`get_by_split`函数。
 
-​        具体的实现参见脚本`client/src/split.py`。
-
-​        实现的流程和结果如下：
+实现的流程和结果如下：
 
 1. 建立`TCP`连接的三次“握手”
 
-   ​        使用`scapy`实现与服务器`docker`容器的连接，服务器`docker`容器的`IP`地址为`192.168.53.131`，具体的服务器实现代码可参看`server/src/server.py`，其提供了三个可以连接的网址：`192.168.53.131/`，`192.168.53.131/mitmproxy`和`192.168.53.131/mit`，第一个可以正常访问，因为地址和返回内容都没有关键词`mitmproxy`，不会被`IDS`拦截；第二个的地址有关键词`mitmproxy`，会被`IDS`拦截，而返回内容没有；第三个地址没有关键词，而返回内容有关键词`mitmproxy`，所以只有返回内容的`packet`会被`IDS`拦截。
+   使用`scapy`实现与服务器`docker`容器的连接，服务器`docker`容器的`IP`地址为`192.168.53.131`，具体的服务器实现代码可参看`server/src/server.py`，其提供了三个可以连接的网址：`192.168.53.131/`，`192.168.53.131/mitmproxy`和`192.168.53.131/mit`，第一个可以正常访问，因为地址和返回内容都没有关键词`mitmproxy`，不会被`IDS`拦截；第二个的地址有关键词`mitmproxy`，会被`IDS`拦截，而返回内容没有；第三个地址没有关键词，而返回内容有关键词`mitmproxy`，所以只有返回内容的`packet`会被`IDS`拦截。
 
-   ​        实现三次“握手”的结果截图如下：
+   实现三次“握手”的结果截图如下：
 
    ![3.1.1-tcp-shake-hands](./img/shakehands.png)
 
 2. 使用`scapy`进行`IP`分片
 
-   ​        按照上面所讲的方法进行`IP`分片，访问地址为`192.168.53.131/mitmproxy`，在不进行分片时发出的`GET`包如下所示：
+   按照上面所讲的方法进行`IP`分片，访问地址为`192.168.53.131/mitmproxy`，在不进行分片时发出的`GET`包如下所示：
 
    ![3.1.2-no-ip-fragment](./img/before_fragment.png)
 
-   ​        在进行`IP`分片后，得到的两个分片后的包如下：
+   在进行`IP`分片后，得到的两个分片后的包如下：
 
    ![3.1.3-after-ip-fragment](./img/after_fragment.png)
 
-   ​        而经过`IP`包的重组之后得到的包如下：
+   而经过`IP`包的重组之后得到的包如下：
 
    ![3.1.4-after-reassembly](./img/after_reassembly.png)
 
-   ​        对比不进行分片的包和进行分片后重组得到的包，我们可以发现，两个包的`payload`是相同的，前面的`IP`头和`TCP`头的地址等也相同，说明分片成功。
+   对比不进行分片的包和进行分片后重组得到的包，我们可以发现，两个包的`payload`是相同的，前面的`IP`头和`TCP`头的地址等也相同，说明分片成功。
 
 3. 将`IDS`的`IP`重组检测关闭，再次进行实验，得到绕过后的结果。
 
    ![3.1.5-ip-fragment-result](./img/ip-result.png)
 
    由此可见，绕过成功。
-#### 3.2 Socks 5
 
-socks 5 related content
+
+#### 3.2 西厢计划
+
+在课上，老师介绍了西厢计划，这个翻墙方案利用了 TCP 连接的一个漏洞来进行防火墙欺骗。主要原理图如下：
+
+#### ![scholar-zhang](img/scholar-zhang.png)
+
+在上图中，我们可以看到，西厢计划主要是 hack 了 TCP 建立连接的过程，`client`本来应该发 ACK 确认建立连接的时候先发了一个序列号错误的 RST 和 ACK，之后再发正确的 ACK，这么一搅浑水之后，就会使得防火墙认为这个 TCP 连接已经断开了而不再去监听，于是防火墙绕过得以成功。
+
+基于上述原理，我们利用`scapy`实现了西厢计划，具体源码见`client/src/scapy/scholar-zhang.py`，其中核心代码如下：
+
+```python
+# hack
+rst = l4.copy()
+rst[TCP].flags = 'R'
+ack = l4.copy()
+ack[TCP].flags = 'A'
+ack[TCP].ack = syn_ack[TCP].seq
+ack[TCP].seq = syn_ack[TCP].ack
+send(rst)
+send(ack)
+```
+
+可以看到这里我们复制了之前发送的`SYN`包，然后对这个包的类型和序号进行修改并发送，即可实现西厢计划。在`client`中直接运行`python3 scapy/scholar-zhang.py`即可运行西厢计划。
+
+然而我们发现，可能由于防火墙内部实现原因，我们的西厢计划并没有成功，防火墙依然发了 RST 阻止我们访问，因此上面的`python`运行会发生错误。这说明我们的防火墙和 GFW 的机制应该是有一些区别的。这种方法绕过我们的防火墙也是行不通的。
+
+#### 3.3 Socks5 代理
+
+由于以上的两种方案我们都没有成功，因此我们考虑采用现在最常用的翻墙方式——`socks5`代理的方法。`socks5`是一种网络传输协议，我们利用`socks5`来绕过防火墙的思路如下图所示：
+
+![socks5](img/socks5.png)
+
+为了实现上图所示的效果，我们在助教推荐的网络结构上加了一个`proxy`容器，用于 ids 绕过于是网络拓扑结构如下图所示：
+
+![Network-socks5](img/Network-socks5.png)
+
+于是我们利用`python`手动实现了`socks5`协议，其中服务器代码见`server/src/socks5_server.py`，客户端代码见`client/src/socks5/socks5_client.py`。同时需要注意的是，我们需要用`openssl`生成`cert.pem`和`key.pem`，将`cert.pem`放在和`socks5_client.py`同一目录，`cert.pem`和`key.pem`放在和`socks5_server.py`同一目录。于是即可实现`socks5`翻墙代理。
+
+### 4. 实验过程
+
+我们在这里介绍`socks5`协议翻墙代理的过程。我们利用 docker 建立2个子网，分别是 `ids-net` 和 `outer-net`，利用下述命令可以建立2个子网：
+
+```Shell
+$ make create_gateway
+```
+
+然后，我们需要 build 并 run 用于测试的 docker 容器：
+
+```Shell
+$ make
+```
+
+可以看到，我们这里有4个容器：`client`, `ids`, `server`, `proxy`。其中 `server` 我们自行用`flask`实现了一个服务器
+
+我们利用`openssl`生成`key.pem`和`cert.pem`：
+
+```bash
+$ openssl req -new -x509 -days 365 -nodes -out cert.pem -keyout key.pem
+```
+
+这里需要注意的是，由于我们的`socks5_client.py`中有一行：
+
+```python
+ssl_server_tcp = context.wrap_socket(server_tcp, server_hostname='socks5')
+```
+
+所以用`openssl`生成证书的时候，注意填写的`hostname`和代码中一致，即`socks5`。生成了`key.pem`和`cert.pem`之后，注意把二者都放在和`socks5_server.py`同目录，把`cert.pem`复制一份放在和`socks5_client.py`同目录。
+
+之后可以分别用下述命令进入`client`, `ids`, `server`, `proxy`：
+
+```Shell
+$ make exec_client
+$ make exec_ids
+$ make exec_server
+$ make exec_proxy
+```
+
+在`client`容器中，如果我们直接用`curl 192.168.53.131`访问服务器是可以成功的，因为没有关键词，但是当我们使用`curl 192.168.53.131/mitmproxy`访问的时候，会被防火墙 Reset 掉，会收到下述消息：
+
+```
+curl: (56) Recv failure: Connection reset by peer
+```
+
+因为我们已经设置了 mitmproxy 为敏感词。
+
+此时我们考虑用`sock5`代理来访问，我们运行
+
+```bash
+$ curl --socks5-hostname 127.0.0.1:$CLIENT_PORT 192.168.53.131
+```
+
+可以看到是可以成功收到回复的，说明`socks5`没有问题，此时我们尝试访问被墙网站
+
+```bash
+$ curl --socks5-hostname 127.0.0.1:$CLIENT_PORT 192.168.53.131/mitmproxy
+```
+
+我们可以激动的发现，我们成功的访问到了敏感词网站。
+
+当实验结束之后，我们可以利用
+
+```Bash
+$ make clean
+```
+
+来清除已生成的 docker 容器。
+
+具体操作过程可见`ids_bypass.mov`视频。
+
+
 
 ## 参考资料
 
-1. [Installing Snort++ in Ubuntu (Version 3.0 Alpha 4 build 239)](https://sublimerobots.com/2017/08/installing-snort-3-b239-in-ubuntu/)
-2. [Baggett, Mark. "IP fragment reassembly with scapy." *SANS Institute InfoSec Reading Room* (2012).](https://www.sans.org/reading-room/whitepapers/tools/ip-fragment-reassembly-scapy-33969)
-3. [Maxwell, Adam. "The very unofficial dummies guide to Scapy." *Retrieved from* (2013).](https://theitgeekchronicles.files.wordpress.com/2012/05/scapyguide1.pdf)
+1. IDS 软件相关
+
+- [Installing Snort++ in Ubuntu (Version 3.0 Alpha 4 build 239)](https://sublimerobots.com/2017/08/installing-snort-3-b239-in-ubuntu/)
+- [Installing Snort++ Example Plugins](http://sublimerobots.com/2017/08/installing-snort-example-plugins/) 
+- [snort 轻量级入侵检测系统安装与使用](http://blog.csdn.net/a821478424/article/details/50951255)
+- [Snort IPS With NFQ (nfqueue) Routing on Ubuntu](http://sublimerobots.com/2017/06/snort-ips-with-nfq-routing-on-ubuntu/) 
+- [snort3: ERROR: Unable to find a Codec with data link type 228](http://seclists.org/snort/2017/q1/529) 
+- [Suricata docs: 11. Setting up IPS/inline for Linux](http://suricata.readthedocs.io/en/latest/setting-up-ipsinline-for-linux.html) 
+- [Bro Auxiliary Programs](https://www.bro.org/sphinx/components/bro-aux/README.html) 
+
+2. IDS 原理相关
+
+- [A Python 3 libnetfilter_queue handler](https://gist.github.com/adrelanos/eb4be156e9a12643642a0c5360b2a91b)
+- [IPS Packet Acquisition PCAP AFPACKET NFQ NFQ IPS Action replace](https://www.academia.edu/7084691/IPS_Packet_Acquisition_PCAP_AFPACKET_NFQ_NFQ_IPS_Action_replace)
+- [simple scapy tcp three-way handshake](https://gist.github.com/tintinweb/8523a9a43a2fb61a6770) 
+- [“西厢计划”原理小解](https://blog.youxu.info/2010/03/14/west-chamber/)
+- [功夫网与翻墙](http://www.chinagfw.org/2010/04/gfw.html)
+
+
+3. TCP 分段相关
+
+- [Baggett, Mark. "IP fragment reassembly with scapy." *SANS Institute InfoSec Reading Room* (2012).](https://www.sans.org/reading-room/whitepapers/tools/ip-fragment-reassembly-scapy-33969)
+- [Maxwell, Adam. "The very unofficial dummies guide to Scapy." *Retrieved from* (2013).](https://theitgeekchronicles.files.wordpress.com/2012/05/scapyguide1.pdf)
+
+
+
+
+## 致谢
+
+- 感谢助教对实验的解答
+- 感谢靳子豪同学的网站 [lab.jinzihao.me/extrahighlatency](http://lab.jinzihao.me/extrahighlatency) 
+- 感谢群里大家的讨论给了我们很多的启示

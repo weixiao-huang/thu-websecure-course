@@ -44,13 +44,33 @@ SUBNET2     := 192.168.53.0/24
 GATEWAY2    := 192.168.53.2
 
 
+#--------------------------------------------------
+# Socks5 Configs
+#--------------------------------------------------
+# Environment Variables
+SERVER_PORT := 12315
+CLIENT_PORT := 12345
+
+# Socks5 Proxy Server
+PROXY_DIR   := proxy
+PROXY_IMAGE := proxy-image
+CONT_PROXY  := proxy
+IP_PROXY    := 192.168.53.66
+
+PROXY_ENVS  := -e "SERVER_PORT=$(SERVER_PORT)"
+
+CLIENT_ENVS := -e "SERVER_PORT=$(SERVER_PORT)" \
+	-e "CLIENT_PORT=$(CLIENT_PORT)" \
+	-e "SERVER_IP=$(IP_PROXY)"
+
+
 #******************** OTHERS *********************#
 # DNS
 DNS1    = 223.5.5.5
 DNS2    = 223.6.6.6
 
 # ALl Contianers
-CONTS   = $(CONT_IDS) $(CONT_CLIENT) $(CONT_SERVER)
+CONTS   = $(CONT_IDS) $(CONT_CLIENT) $(CONT_SERVER) $(CONT_PROXY)
 NETS    = $(NETWORK) $(NETWORK2)
 
 # Flags
@@ -65,6 +85,7 @@ docker_run = docker run \
 	--network=$(4) --ip=$(2) \
 	$(DNSFLAG) $(PFLAGS) \
 	-v $(CURDIR)/$(5)/src:/usr/src/app \
+	$(6) \
 	--name=$(1) $(3)
 
 # container_name
@@ -85,11 +106,13 @@ build:
 	$(V)docker build -t $(IDS_IMAGE) $(IDS_DIR)
 	$(V)docker build -t $(CLIENT_IMAGE) $(CLIENT_DIR)
 	$(V)docker build -t $(SERVER_IMAGE) $(SERVER_DIR)
+	$(V)docker build -t $(PROXY_IMAGE) $(PROXY_DIR)
 
 run:
+	$(V)$(call docker_run,$(CONT_CLIENT),$(IP_CLIENT),$(CLIENT_IMAGE),$(NETWORK),$(CLIENT_DIR),$(CLIENT_ENVS))
 	$(V)$(call docker_run,$(CONT_IDS),$(IP_IDS),$(IDS_IMAGE),$(NETWORK),$(IDS_DIR))
-	$(V)$(call docker_run,$(CONT_CLIENT),$(IP_CLIENT),$(CLIENT_IMAGE),$(NETWORK),$(CLIENT_DIR))
 	$(V)$(call docker_run,$(CONT_SERVER),$(IP_SERVER),$(SERVER_IMAGE),$(NETWORK2),$(SERVER_DIR))
+	$(V)$(call docker_run,$(CONT_PROXY),$(IP_PROXY),$(PROXY_IMAGE),$(NETWORK2),$(PROXY_DIR),$(PROXY_ENVS))
 	$(V)docker network connect --ip=$(IP_IDS2) $(NETWORK2) $(CONT_IDS)
 
 net_config:
@@ -107,6 +130,9 @@ exec_ids:
 
 exec_client:
 	$(V)$(call docker_exec,$(CONT_CLIENT))
+
+exec_proxy:
+	$(V)$(call docker_exec,$(CONT_PROXY))
 
 exec_server:
 	$(V)$(call docker_exec,$(CONT_SERVER))
