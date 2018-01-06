@@ -35,13 +35,13 @@ snort 规则教程：http://snort.datanerds.net/writing_snort_rules.htm#first_ex
 
 网络拓扑结构采用作业文档中给出的结构，如下图所示：
 
-![1.1 - Network](./img/net.png)
+![1.1 - Network](./img/Network.png)
 
 其中IDS上配置两块虚拟网卡`eth0`和`eth1`，而`client`、`IDS`和`server`分别为一个docker container。类似于前面两次作业的情况，我们提供了`Makefile`来创建 docker image 和 docker container。
 
 ### 2. IDS配置
 
-我们尝试使用了多种IDS配置的软件，包括`snort`，`suricata`，`bro`等，在不同程度上进行了实现，在 2.1 和 2.2 中，我们服务器用的是靳子豪同学的高延时网站：http://lab.jinzihao.me/extrahighlatency/?time=3。具体的情况如下：
+我们尝试使用了多种IDS配置的软件，包括`snort`，`suricata`，`bro`等，在不同程度上进行了实现，在 2.1 和 2.2 中，我们服务器用的是靳子豪同学的高延时网站：http://lab.jinzihao.me/extrahighlatency/?time=3 。具体的情况如下：
 
 #### 2.1 IDS的踩坑之旅
 
