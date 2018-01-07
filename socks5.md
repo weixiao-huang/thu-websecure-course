@@ -111,3 +111,57 @@ $ make clean
 
 以上是我们的测试过程，下面我们来讲述一下如何用我们的代码实现真正的在浏览器中翻墙的操作。
 
+首先我们需要一台位于国外的（更准确的说是能够连接到我们想要访问的网站，并且我们可以连接到的）服务器，这里我们使用的服务器的`IP`地址为`104.236.134.226`，使用的服务器端口为`1234`，使用的客户端端口为`12345`。下面三条指令在客户端均需要运行，而服务器端只需要设置`$SERVER_PORT`环境变量。
+
+```bash
+$ export SERVER_IP="104.236.134.226"
+$ export SERVER_PORT="1234"
+$ export CLIENT_PORT="12345"
+```
+
+然后在服务器端在`socks5_server.py`所在的文件夹中运行如下命令，即使用`openssl`生成证书，生成之后要将cert.pem复制一份到本地`socks5_client.py`所在的文件夹。
+
+```bash
+$ openssl req -new -x509 -days 365 -nodes -out cert.pem -keyout key.pem
+```
+
+然后，在服务器端和客户端分别运行`Python3`脚本
+
+服务器端
+
+```bash
+$ python3 socks5_server.py
+```
+
+客户端
+
+```bash
+$ python3 socks5_client.py
+```
+
+我们以`Chrome`浏览器为例进行`proxy`的设置，使用`SwitchOmega`插件，配置的结果如下
+
+![SwitchOmega](./img/SwitchOmegaSetting.png)
+
+其中`Protocol`选择`SOCKS5`，`Server`填写`127.0.0.1`，`Port`填写与`$CLIENT_PORT`相同。
+
+在配置完成后，使用这个`Profile`，即可实现访问`www.google.com`等网站，具体的结果参见录屏视频`socks5_google.mp4`。
+
+
+
+## 四、实现机制分析
+
+使用`socks5+TLS`能够成功的条件如下：
+
+1. 代理服务器与客户端能够建立稳定的`TCP`连接
+2. 代理服务器能够访问`ids`禁止了的网站
+3. 客户端上安装了代理服务器上的证书，能够实现两者之间的`TLS`加密
+4. 代理服务器的`IP`，开放端口已知，证书中的`hostname`也已知
+5. 客户端的浏览器正确设置了`proxy`
+
+整个流程上是，客户端通过`TLS`加密数据并发给代理服务器，由于数据进行了加密，所以不会被`ids`检测到敏感词，而代理服务器接收到客户端的包之后，会与目标服务器建立连接并将接收到的服务器的包经过`TLS`加密后，发回客户端，由于同样进行了加密，所以同样不会被`ids`检测到敏感词。由此，客户端通过`socks5+TLS`并在代理服务器的帮助下，成功逃逸了`ids`的检测。
+
+## 参考文献
+
+1. [socks代理服务器协议的说明](https://my.oschina.net/u/660063/blog/201187)
+
