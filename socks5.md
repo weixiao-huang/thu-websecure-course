@@ -19,6 +19,7 @@
 - 利用 `Python` 实现 `socks5` 协议
 - 利用 `openssl` 生成证书，实现 `TLS` 加密功能
 - 在客户端和服务端来运行 `socks5` 脚本，利用 `curl`来测试是否成功代理：`curl -socks5-hostname YOUR_PROXY_ADDR_PORT www.google.com`
+- 在这里，我们测试的时候，直接用了上一次 `ids` 绕过实验中我们的代码结构和 `Docker` 配置
 
 关于 `socks5` 协议的相关知识，我们查阅了相关的资料，最后参考了这一篇资料：[socks代理服务器协议的说明](https://my.oschina.net/u/660063/blog/201187)，在此不在赘述，具体实现细节可以查看代码。
 
@@ -161,7 +162,12 @@ $ python3 socks5_client.py
 
 整个流程上是，客户端通过`TLS`加密数据并发给代理服务器，由于数据进行了加密，所以不会被`ids`检测到敏感词，而代理服务器接收到客户端的包之后，会与目标服务器建立连接并将接收到的服务器的包经过`TLS`加密后，发回客户端，由于同样进行了加密，所以同样不会被`ids`检测到敏感词。由此，客户端通过`socks5+TLS`并在代理服务器的帮助下，成功逃逸了`ids`的检测。
 
-## 参考文献
+
+
+## 五、参考文献
 
 1. [socks代理服务器协议的说明](https://my.oschina.net/u/660063/blog/201187)
+2. [用Python写socks5服务器端](http://xiaoxia.org/2011/03/29/written-by-python-socks5-server/)
+3. [Shadowsocks 源码解释](http://yveschan.github.io/blog/shadowsocks-analysis/)
+4. [TLS协议分析 与 现代加密通信协议设计](https://www.tuicool.com/articles/EJZJzmn)
 
