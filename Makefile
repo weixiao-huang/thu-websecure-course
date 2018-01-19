@@ -7,6 +7,10 @@ WORKDIR	   := /usr/src/app
 DFLAGS     := --privileged -itd -v $(CURDIR)/src:$(WORKDIR) -p 1234:1234
 BASH       := /bin/bash
 
+DUMPDIR    := dump
+DUMPFILE   := ./recho/recho
+DUMPOUTPUT := recho.s
+
 docker_run = docker run $(DFLAGS) --name $(CONTAINER) $(IMAGE)
 
 docker_bash = $(docker_run) $(BASH) -c "$(1)"
@@ -30,3 +34,8 @@ stop:
 
 rm:
 	$(V)docker rm $(CONTAINER)
+
+dump:
+	$(V)mkdir -p src/$(DUMPDIR)
+	$(V)docker exec -it $(CONTAINER) \
+		$(BASH) -c "objdump -d $(DUMPFILE) > $(DUMPDIR)/$(DUMPOUTPUT)"

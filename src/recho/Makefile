@@ -1,5 +1,10 @@
+INPUT      := ./recho.c ./libc.so.6 
+CFLAGS     := -m32 -fno-stack-protector -z execstack 
+
+OUTPUT     := irecho
+
 default:
-	gcc ./recho.c ./libc.so.6 -m32 -fno-stack-protector -z execstack -o irecho
+	gcc $(INPUT) $(CFLAGS) -o $(OUTPUT)
 
 clean:
-	rm irecho
+	rm $(OUTPUT)

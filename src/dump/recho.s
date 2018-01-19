@@ -1,5 +1,5 @@
 
-recho/recho:     file format elf32-i386
+./recho/recho:     file format elf32-i386
 
 
 Disassembly of section .init:
@@ -19,7 +19,7 @@ Disassembly of section .init:
 
 Disassembly of section .plt:
 
-08048620 <.plt>:
+08048620 <setsockopt@plt-0x10>:
  8048620:	ff 35 fc a1 04 08    	pushl  0x804a1fc
  8048626:	ff 25 00 a2 04 08    	jmp    *0x804a200
  804862c:	00 00                	add    %al,(%eax)
@@ -28,142 +28,142 @@ Disassembly of section .plt:
 08048630 <setsockopt@plt>:
  8048630:	ff 25 04 a2 04 08    	jmp    *0x804a204
  8048636:	68 00 00 00 00       	push   $0x0
- 804863b:	e9 e0 ff ff ff       	jmp    8048620 <.plt>
+ 804863b:	e9 e0 ff ff ff       	jmp    8048620 <_init+0x2c>
 
 08048640 <getpwnam@plt>:
  8048640:	ff 25 08 a2 04 08    	jmp    *0x804a208
  8048646:	68 08 00 00 00       	push   $0x8
- 804864b:	e9 d0 ff ff ff       	jmp    8048620 <.plt>
+ 804864b:	e9 d0 ff ff ff       	jmp    8048620 <_init+0x2c>
 
 08048650 <dup2@plt>:
  8048650:	ff 25 0c a2 04 08    	jmp    *0x804a20c
  8048656:	68 10 00 00 00       	push   $0x10
- 804865b:	e9 c0 ff ff ff       	jmp    8048620 <.plt>
+ 804865b:	e9 c0 ff ff ff       	jmp    8048620 <_init+0x2c>
 
 08048660 <_exit@plt>:
  8048660:	ff 25 10 a2 04 08    	jmp    *0x804a210
  8048666:	68 18 00 00 00       	push   $0x18
- 804866b:	e9 b0 ff ff ff       	jmp    8048620 <.plt>
+ 804866b:	e9 b0 ff ff ff       	jmp    8048620 <_init+0x2c>
 
 08048670 <signal@plt>:
  8048670:	ff 25 14 a2 04 08    	jmp    *0x804a214
  8048676:	68 20 00 00 00       	push   $0x20
- 804867b:	e9 a0 ff ff ff       	jmp    8048620 <.plt>
+ 804867b:	e9 a0 ff ff ff       	jmp    8048620 <_init+0x2c>
 
 08048680 <chdir@plt>:
  8048680:	ff 25 18 a2 04 08    	jmp    *0x804a218
  8048686:	68 28 00 00 00       	push   $0x28
- 804868b:	e9 90 ff ff ff       	jmp    8048620 <.plt>
+ 804868b:	e9 90 ff ff ff       	jmp    8048620 <_init+0x2c>
 
 08048690 <alarm@plt>:
  8048690:	ff 25 1c a2 04 08    	jmp    *0x804a21c
  8048696:	68 30 00 00 00       	push   $0x30
- 804869b:	e9 80 ff ff ff       	jmp    8048620 <.plt>
+ 804869b:	e9 80 ff ff ff       	jmp    8048620 <_init+0x2c>
 
 080486a0 <htons@plt>:
  80486a0:	ff 25 20 a2 04 08    	jmp    *0x804a220
  80486a6:	68 38 00 00 00       	push   $0x38
- 80486ab:	e9 70 ff ff ff       	jmp    8048620 <.plt>
+ 80486ab:	e9 70 ff ff ff       	jmp    8048620 <_init+0x2c>
 
 080486b0 <setgroups@plt>:
  80486b0:	ff 25 24 a2 04 08    	jmp    *0x804a224
  80486b6:	68 40 00 00 00       	push   $0x40
- 80486bb:	e9 60 ff ff ff       	jmp    8048620 <.plt>
+ 80486bb:	e9 60 ff ff ff       	jmp    8048620 <_init+0x2c>
 
 080486c0 <perror@plt>:
  80486c0:	ff 25 28 a2 04 08    	jmp    *0x804a228
  80486c6:	68 48 00 00 00       	push   $0x48
- 80486cb:	e9 50 ff ff ff       	jmp    8048620 <.plt>
+ 80486cb:	e9 50 ff ff ff       	jmp    8048620 <_init+0x2c>
 
 080486d0 <accept@plt>:
  80486d0:	ff 25 2c a2 04 08    	jmp    *0x804a22c
  80486d6:	68 50 00 00 00       	push   $0x50
- 80486db:	e9 40 ff ff ff       	jmp    8048620 <.plt>
+ 80486db:	e9 40 ff ff ff       	jmp    8048620 <_init+0x2c>
 
 080486e0 <fwrite@plt>:
  80486e0:	ff 25 30 a2 04 08    	jmp    *0x804a230
  80486e6:	68 58 00 00 00       	push   $0x58
- 80486eb:	e9 30 ff ff ff       	jmp    8048620 <.plt>
+ 80486eb:	e9 30 ff ff ff       	jmp    8048620 <_init+0x2c>
 
 080486f0 <setgid@plt>:
  80486f0:	ff 25 34 a2 04 08    	jmp    *0x804a234
  80486f6:	68 60 00 00 00       	push   $0x60
- 80486fb:	e9 20 ff ff ff       	jmp    8048620 <.plt>
+ 80486fb:	e9 20 ff ff ff       	jmp    8048620 <_init+0x2c>
 
 08048700 <__gmon_start__@plt>:
  8048700:	ff 25 38 a2 04 08    	jmp    *0x804a238
  8048706:	68 68 00 00 00       	push   $0x68
- 804870b:	e9 10 ff ff ff       	jmp    8048620 <.plt>
+ 804870b:	e9 10 ff ff ff       	jmp    8048620 <_init+0x2c>
 
 08048710 <strlen@plt>:
  8048710:	ff 25 3c a2 04 08    	jmp    *0x804a23c
  8048716:	68 70 00 00 00       	push   $0x70
- 804871b:	e9 00 ff ff ff       	jmp    8048620 <.plt>
+ 804871b:	e9 00 ff ff ff       	jmp    8048620 <_init+0x2c>
 
 08048720 <__libc_start_main@plt>:
  8048720:	ff 25 40 a2 04 08    	jmp    *0x804a240
  8048726:	68 78 00 00 00       	push   $0x78
- 804872b:	e9 f0 fe ff ff       	jmp    8048620 <.plt>
+ 804872b:	e9 f0 fe ff ff       	jmp    8048620 <_init+0x2c>
 
 08048730 <fprintf@plt>:
  8048730:	ff 25 44 a2 04 08    	jmp    *0x804a244
  8048736:	68 80 00 00 00       	push   $0x80
- 804873b:	e9 e0 fe ff ff       	jmp    8048620 <.plt>
+ 804873b:	e9 e0 fe ff ff       	jmp    8048620 <_init+0x2c>
 
 08048740 <bind@plt>:
  8048740:	ff 25 48 a2 04 08    	jmp    *0x804a248
  8048746:	68 88 00 00 00       	push   $0x88
- 804874b:	e9 d0 fe ff ff       	jmp    8048620 <.plt>
+ 804874b:	e9 d0 fe ff ff       	jmp    8048620 <_init+0x2c>
 
 08048750 <memset@plt>:
  8048750:	ff 25 4c a2 04 08    	jmp    *0x804a24c
  8048756:	68 90 00 00 00       	push   $0x90
- 804875b:	e9 c0 fe ff ff       	jmp    8048620 <.plt>
+ 804875b:	e9 c0 fe ff ff       	jmp    8048620 <_init+0x2c>
 
 08048760 <__errno_location@plt>:
  8048760:	ff 25 50 a2 04 08    	jmp    *0x804a250
  8048766:	68 98 00 00 00       	push   $0x98
- 804876b:	e9 b0 fe ff ff       	jmp    8048620 <.plt>
+ 804876b:	e9 b0 fe ff ff       	jmp    8048620 <_init+0x2c>
 
 08048770 <fork@plt>:
  8048770:	ff 25 54 a2 04 08    	jmp    *0x804a254
  8048776:	68 a0 00 00 00       	push   $0xa0
- 804877b:	e9 a0 fe ff ff       	jmp    8048620 <.plt>
+ 804877b:	e9 a0 fe ff ff       	jmp    8048620 <_init+0x2c>
 
 08048780 <htonl@plt>:
  8048780:	ff 25 58 a2 04 08    	jmp    *0x804a258
  8048786:	68 a8 00 00 00       	push   $0xa8
- 804878b:	e9 90 fe ff ff       	jmp    8048620 <.plt>
+ 804878b:	e9 90 fe ff ff       	jmp    8048620 <_init+0x2c>
 
 08048790 <listen@plt>:
  8048790:	ff 25 5c a2 04 08    	jmp    *0x804a25c
  8048796:	68 b0 00 00 00       	push   $0xb0
- 804879b:	e9 80 fe ff ff       	jmp    8048620 <.plt>
+ 804879b:	e9 80 fe ff ff       	jmp    8048620 <_init+0x2c>
 
 080487a0 <setuid@plt>:
  80487a0:	ff 25 60 a2 04 08    	jmp    *0x804a260
  80487a6:	68 b8 00 00 00       	push   $0xb8
- 80487ab:	e9 70 fe ff ff       	jmp    8048620 <.plt>
+ 80487ab:	e9 70 fe ff ff       	jmp    8048620 <_init+0x2c>
 
 080487b0 <socket@plt>:
  80487b0:	ff 25 64 a2 04 08    	jmp    *0x804a264
  80487b6:	68 c0 00 00 00       	push   $0xc0
- 80487bb:	e9 60 fe ff ff       	jmp    8048620 <.plt>
+ 80487bb:	e9 60 fe ff ff       	jmp    8048620 <_init+0x2c>
 
 080487c0 <recv@plt>:
  80487c0:	ff 25 68 a2 04 08    	jmp    *0x804a268
  80487c6:	68 c8 00 00 00       	push   $0xc8
- 80487cb:	e9 50 fe ff ff       	jmp    8048620 <.plt>
+ 80487cb:	e9 50 fe ff ff       	jmp    8048620 <_init+0x2c>
 
 080487d0 <close@plt>:
  80487d0:	ff 25 6c a2 04 08    	jmp    *0x804a26c
  80487d6:	68 d0 00 00 00       	push   $0xd0
- 80487db:	e9 40 fe ff ff       	jmp    8048620 <.plt>
+ 80487db:	e9 40 fe ff ff       	jmp    8048620 <_init+0x2c>
 
 080487e0 <send@plt>:
  80487e0:	ff 25 70 a2 04 08    	jmp    *0x804a270
  80487e6:	68 d8 00 00 00       	push   $0xd8
- 80487eb:	e9 30 fe ff ff       	jmp    8048620 <.plt>
+ 80487eb:	e9 30 fe ff ff       	jmp    8048620 <_init+0x2c>
 
 Disassembly of section .text:
 
