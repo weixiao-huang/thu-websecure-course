@@ -1465,3 +1465,5 @@ python Dashboard.start()
 # Local Variables:
 # mode: python
 # End:
+
+set auto-load safe-path /

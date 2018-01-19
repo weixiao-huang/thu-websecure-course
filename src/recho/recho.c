@@ -148,7 +148,7 @@ int main(int argc, char **argv) {
         }
 
         if (pid == 0) {
-            alarm(15);
+            // alarm(15);
 
             close(sockfd);
 
